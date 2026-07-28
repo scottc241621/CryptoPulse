@@ -169,6 +169,31 @@ def fetch_top_coins(limit=10):
 # COMMAND HANDLERS
 # ---------------------------------------------------------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Handle deep-link payload from the Mini App, e.g. t.me/YourBot?start=btc_65000_above
+    if context.args:
+        payload = context.args[0]
+        parts = payload.split("_")
+        if len(parts) == 3:
+            coin_query, price_str, direction = parts
+            direction = direction.lower()
+            if direction in ("above", "below"):
+                try:
+                    target_price = float(price_str)
+                    coin_id, symbol = resolve_coin_id(coin_query)
+                    if coin_id:
+                        chat_id = update.effective_chat.id
+                        alert_id = add_alert(chat_id, coin_id, symbol, target_price, direction)
+                        await update.message.reply_markdown(
+                            f"👋 *Welcome to CryptoPulse!*\n\n"
+                            f"✅ Alert #{alert_id} set from the Mini App: *{symbol}* {direction} ${target_price:,.2f}\n"
+                            f"I'll message you the moment it crosses — even with the app closed.\n\n"
+                            f"Type /help to see everything else I can do."
+                        )
+                        return
+                except ValueError:
+                    pass
+        # payload existed but couldn't be parsed — fall through to normal welcome
+
     text = (
         "👋 *Welcome to CryptoPulse!*\n\n"
         "I track live crypto prices and can ping you the moment a coin hits "
